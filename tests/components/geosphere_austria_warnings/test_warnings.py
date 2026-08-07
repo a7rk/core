@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime
 
+import json
+
 from pygeosphere_warnings import (
     LocationWarnings,
     WarningLevel,
@@ -14,6 +16,8 @@ from homeassistant.components.geosphere_austria_warnings.const import DOMAIN
 from homeassistant.components.geosphere_austria_warnings.warnings import (
     LEVEL_NONE,
     highest_warning_level,
+    serialize_warning,
+    serialize_warnings,
     sort_warnings,
     warning_sensor_attributes,
 )
