@@ -105,7 +105,7 @@ def select_highest_warning(
 def warning_sensor_attributes(
     warnings: Iterable[WeatherWarning],
 ) -> dict[str, Any]:
-    """Return the four agreed attributes for the selected warning.
+    """Return the five agreed attributes for the selected warning.
 
     The full warning payload is intentionally not exposed on sensor entities.
     """
@@ -113,12 +113,20 @@ def warning_sensor_attributes(
     if warning is None:
         return {}
 
-    return {
+    highest_level = highest_warning_level(warnings)
+    selected_level = warning_level_slug(warning.level)
+        
+    attributes = {
         "type": warning_type_slug(warning.warning_type),
         "start": warning.start.isoformat(),
         "end": warning.end.isoformat(),
         "warning_id": warning.warning_id,
     }
+
+    if selected_level != highest_level:
+        attributes["level"] = selected_level
+
+    return attributes
 
 
 def highest_warning_level(warnings: Iterable[WeatherWarning]) -> str:
