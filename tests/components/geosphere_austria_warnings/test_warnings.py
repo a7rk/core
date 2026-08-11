@@ -1,5 +1,7 @@
 """Tests for shared GeoSphere Austria warning helpers."""
 
+import json
+
 from pygeosphere_warnings import (
     LocationWarnings,
     WarningLevel,
@@ -13,6 +15,8 @@ from homeassistant.components.geosphere_austria_warnings.warnings import (
     LEVEL_NONE,
     highest_warning_level,
     select_highest_warning,
+    serialize_warning,
+    serialize_warnings,
     sort_warnings,
     warning_sensor_attributes,
 )
@@ -48,12 +52,8 @@ def test_sort_warnings_is_deterministic(warnings: list[WeatherWarning]) -> None:
         (10, 51),
         (10, 11),
     ]
-    assert [
-        (warning.warning_id, warning.course_id) for warning in sorted_warnings
-    ] == expected
-    assert [
-        (warning.warning_id, warning.course_id) for warning in sorted_again
-    ] == expected
+    assert [(warning.warning_id, warning.course_id) for warning in sorted_warnings] == expected
+    assert [(warning.warning_id, warning.course_id) for warning in sorted_again] == expected
 
 
 def test_select_highest_warning_uses_severity_then_end_time(
@@ -72,8 +72,8 @@ def test_highest_warning_level(warnings: list[WeatherWarning]) -> None:
     """Test highest-level values and the empty-bucket value."""
     assert highest_warning_level(warnings) == "orange"
     assert highest_warning_level([]) == LEVEL_NONE
-
-
+ 
+ 
 def test_select_highest_warning_prefers_storm_over_concurrent_heat(
     warnings: list[WeatherWarning],
 ) -> None:
@@ -89,8 +89,8 @@ def test_select_highest_warning_prefers_storm_over_concurrent_heat(
     assert selected is not None
     assert selected.course_id == 12
     assert selected.warning_type == WarningType.STORM
-
-
+ 
+ 
 def test_sort_warnings_demotes_sustained_heat_below_acute_thunderstorm(
     warnings: list[WeatherWarning],
 ) -> None:
@@ -104,8 +104,8 @@ def test_sort_warnings_demotes_sustained_heat_below_acute_thunderstorm(
     sorted_warnings = sort_warnings(heat_and_thunderstorm)
 
     assert [warning.course_id for warning in sorted_warnings] == [2, 51, 11]
-
-
+ 
+ 
 def test_highest_warning_level_ignores_type_demotion(
     warnings: list[WeatherWarning],
 ) -> None:
@@ -117,8 +117,8 @@ def test_highest_warning_level_ignores_type_demotion(
     ]
 
     assert highest_warning_level(heat_and_thunderstorm) == "orange"
-
-
+ 
+ 
 def test_select_highest_warning_prefers_acute_over_sustained(
     warnings: list[WeatherWarning],
 ) -> None:
@@ -135,11 +135,11 @@ def test_select_highest_warning_prefers_acute_over_sustained(
     assert selected is not None
     assert selected.course_id == 2
     assert selected.warning_type == WarningType.THUNDERSTORM
-
-
+ 
+ 
 def test_ranking_tie_between_equal_levels_prefers_soonest_end() -> None:
     """Test the case of an all-day warning vs. a narrow-window warning.
-
+ 
     An all-day orange heat warning and a yellow thunderstorm warning active
     only mid-afternoon are equally ranked once heat is demoted below its
     nominal level; the thunderstorm, ending soonest, must win the tie rather
@@ -174,17 +174,15 @@ def test_ranking_tie_between_equal_levels_prefers_soonest_end() -> None:
         meteo_text="",
         update_reason="",
     )
-
+ 
     selected = select_highest_warning([all_day_heat, afternoon_thunderstorm])
-
+ 
     assert selected is not None
     assert selected.warning_id == 200
     assert highest_warning_level([all_day_heat, afternoon_thunderstorm]) == "orange"
 
 
-def test_warning_sensor_attributes_are_flat_and_minimal(
-    warnings: list[WeatherWarning],
-) -> None:
+def test_warning_sensor_attributes_are_flat_and_minimal(warnings: list[WeatherWarning]) -> None:
     """Test that sensor attributes expose only the selected warning details."""
     selected = select_highest_warning(warnings)
     assert selected is not None
@@ -199,3 +197,53 @@ def test_warning_sensor_attributes_are_flat_and_minimal(
     attributes = warning_sensor_attributes([selected])
     assert set(attributes) == {"type", "start", "end", "warning_id"}
     assert warning_sensor_attributes([]) == {}
+
+
+def test_serialize_warning_contains_complete_json_compatible_record(
+    warnings: list,
+) -> None:
+    """Test complete warning serialization and stable enum slugs."""
+    warning = next(
+        item
+        for item in warnings
+        if item.warning_id == 4149 and item.course_id == 12
+    )
+
+    serialized = serialize_warning(warning)
+
+    assert serialized == {
+        "warning_id": 4149,
+        "change_id": 6,
+        "course_id": 12,
+        "type": "storm",
+        "level": "orange",
+        "start": "2023-03-27T08:00:00+00:00",
+        "end": "2023-03-27T18:00:00+00:00",
+        "text": "Orange storm warning from Mon, 27.03.2023 08:00 until Mon, 27.03.2023 18:00",
+        "impacts": "* Branches may fall and objects may be thrown around.",
+        "recommendations": "* Be careful in forests, parks and avenues!",
+        "meteo_text": "Strong northwest winds with gusts between 60 and 80 km/h.",
+        "update_reason": "",
+    }
+    assert "WarningType." not in repr(serialized)
+    assert "WarningLevel." not in repr(serialized)
+    json.dumps(serialized)
+
+
+def test_serialize_warnings_preserves_shared_sort_order(warnings: list) -> None:
+    """Test serialization preserves the shared deterministic ordering."""
+    serialized = serialize_warnings(reversed(warnings))
+
+    expected = [
+        (4149, 12),
+        (4150, 52),
+        (4149, 31),
+        (4150, 61),
+        (4837, 2),
+        (10, 51),
+        (10, 11),
+    ]
+    assert [(w["warning_id"], w["course_id"]) for w in serialized] == expected
+    assert all(isinstance(warning["start"], str) for warning in serialized)
+    assert all(isinstance(warning["end"], str) for warning in serialized)
+    json.dumps(serialized)
