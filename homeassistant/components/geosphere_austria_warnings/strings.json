@@ -22,18 +22,18 @@
   },
   "entity": {
     "sensor": {
-      "active_warnings": {
-        "name": "Active warnings",
-        "unit_of_measurement": "warnings"
-      },
-      "warning_level": {
-        "name": "Warning level",
+      "active_warning_level": {
+        "name": "Active warning level",
         "state": {
           "none": "No warning",
           "orange": "Orange",
           "red": "Red",
           "yellow": "Yellow"
         }
+      },
+      "active_warnings": {
+        "name": "Active warnings",
+        "unit_of_measurement": "warnings"
       }
     }
   },

@@ -1,11 +1,11 @@
 {
   "entity": {
     "sensor": {
+      "active_warning_level": {
+        "default": "mdi:alert"
+      },
       "active_warnings": {
         "default": "mdi:alert-circle-outline"
-      },
-      "warning_level": {
-        "default": "mdi:alert"
       }
     }
   }

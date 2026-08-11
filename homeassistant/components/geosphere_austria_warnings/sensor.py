@@ -40,8 +40,8 @@ class GeoSphereSensorDescription(SensorEntityDescription):
 
 SENSORS: tuple[GeoSphereSensorDescription, ...] = (
     GeoSphereSensorDescription(
-        key="warning_level",
-        translation_key="warning_level",
+        key="active_warning_level",
+        translation_key="active_warning_level",
         device_class=SensorDeviceClass.ENUM,
         options=[LEVEL_NONE, "yellow", "orange", "red"],
         value_fn=_max_level,

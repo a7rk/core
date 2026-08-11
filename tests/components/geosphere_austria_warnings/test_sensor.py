@@ -44,7 +44,7 @@ async def test_sensors_without_active_warning(
     """Test the state of the sensors when no warning is active."""
     await setup_integration(hass, mock_config_entry)
 
-    assert (state := hass.states.get("sensor.schwechat_warning_level"))
+    assert (state := hass.states.get("sensor.schwechat_active_warning_level"))
     assert state.state == "none"
     assert (state := hass.states.get(ACTIVE_WARNINGS_ENTITY_ID))
     assert state.state == "0"
